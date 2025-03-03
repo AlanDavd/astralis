@@ -38,7 +38,7 @@ func NewNASARepository(apiKey string) *nasaAPIRepository {
 
 func (r *nasaAPIRepository) GetEvents(ctx context.Context, timeRange domain.TimeRange) ([]domain.Event, error) {
 	// Get solar events (CMEs)
-	url := fmt.Sprintf("%s/CME/start_date=%s&end_date=%s&api_key=%s",
+	url := fmt.Sprintf("%s/CME/?start_date=%s&end_date=%s&api_key=%s",
 		cameBaseURL,
 		timeRange.Start.Format("2006-01-02"),
 		timeRange.End.Format("2006-01-02"),
@@ -60,9 +60,24 @@ func (r *nasaAPIRepository) GetEvents(ctx context.Context, timeRange domain.Time
 		return nil, fmt.Errorf("NASA API returned status: %s", resp.Status)
 	}
 
-	var cmeEvents []cmeEvent
-	if err := json.NewDecoder(resp.Body).Decode(&cmeEvents); err != nil {
+	var rawEvents []map[string]interface{}
+	if err := json.NewDecoder(resp.Body).Decode(&rawEvents); err != nil {
 		return nil, fmt.Errorf("decoding CME events: %w", err)
+	}
+	var cmeEvents []cmeEvent
+	for _, raw := range rawEvents {
+		var event cmeEvent
+		event.ActivityID = raw["activityID"].(string)
+		event.Note = raw["note"].(string)
+		event.CatalogID = raw["catalog"].(string)
+		event.SourceLocation = raw["sourceLocation"].(string)
+
+		startTime, err := time.Parse("2006-01-02T15:04Z", raw["startTime"].(string))
+		if err != nil {
+			return nil, fmt.Errorf("parsing start time: %w", err)
+		}
+		event.StartTime = startTime
+		cmeEvents = append(cmeEvents, event)
 	}
 
 	var events []domain.Event

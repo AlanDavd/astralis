@@ -43,7 +43,7 @@ func NewAstronomyAPIRepository() *astronomyAPIRepository {
 
 func (r *astronomyAPIRepository) GetEvents(ctx context.Context, timeRange domain.TimeRange) ([]domain.Event, error) {
 	// Get visible planets data
-	url := fmt.Sprintf("%s/visible?latitude=0&longitude=0&date=%s",
+	url := fmt.Sprintf("%s?latitude=0&longitude=0&date=%s",
 		baseURL,
 		timeRange.Start.Format("2006-01-02"),
 	)
@@ -70,22 +70,20 @@ func (r *astronomyAPIRepository) GetEvents(ctx context.Context, timeRange domain
 
 	var events []domain.Event
 	for _, planet := range visResponse.Data {
-		if planet.Visibility == "visible" {
-			event := domain.Event{
-				ID:          fmt.Sprintf("planet-%s-%s", planet.Planet.Name, timeRange.Start.Format("2006-01-02")),
-				Title:       fmt.Sprintf("%s Visible in %s", planet.Planet.Name, planet.Position.Constellation),
-				Description: fmt.Sprintf("%s is visible at altitude %.2f° and azimuth %.2f°", 
-					planet.Planet.Name, planet.Position.Altitude, planet.Position.Azimuth),
-				StartTime:   timeRange.Start,
-				EndTime:     timeRange.Start.Add(24 * time.Hour),
-				Type:        domain.Transit,
-				Location:    planet.Position.Constellation,
-				Source:     "Visible Planets API",
-				Visibility: fmt.Sprintf("Altitude: %.2f°, Azimuth: %.2f°", 
-					planet.Position.Altitude, planet.Position.Azimuth),
-			}
-			events = append(events, event)
+		event := domain.Event{
+			ID:          fmt.Sprintf("planet-%s-%s", planet.Planet.Name, timeRange.Start.Format("2006-01-02")),
+			Title:       fmt.Sprintf("%s Visible in %s", planet.Planet.Name, planet.Position.Constellation),
+			Description: fmt.Sprintf("%s is visible at altitude %.2f° and azimuth %.2f°",
+				planet.Planet.Name, planet.Position.Altitude, planet.Position.Azimuth),
+			StartTime:   timeRange.Start,
+			EndTime:     timeRange.Start.Add(24 * time.Hour),
+			Type:        domain.Transit,
+			Location:    planet.Position.Constellation,
+			Source:     "Visible Planets API",
+			Visibility: fmt.Sprintf("Altitude: %.2f°, Azimuth: %.2f°", 
+				planet.Position.Altitude, planet.Position.Azimuth),
 		}
+		events = append(events, event)
 	}
 
 	return events, nil

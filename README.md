@@ -31,7 +31,7 @@ Astralis is a Go-based REST API and CLI application that provides information ab
 
 2. Install dependencies:
    ```bash
-   go mod download
+   go mod tidy
    ```
 
 ## Running Tests

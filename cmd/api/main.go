@@ -16,9 +16,7 @@ import (
 
 func main() {
 	// Initialize repositories
-	nasaRepo := nasaapi.NewNASARepository(
-		os.Getenv("NASA_API_KEY"),
-	)
+	nasaRepo := nasaapi.NewNASARepository(os.Getenv("NASA_API_KEY"))
 
 	astronomyRepo := astronomyapi.NewAstronomyAPIRepository()
 

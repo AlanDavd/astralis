@@ -115,7 +115,7 @@ func (h *Handler) GetEventsByType(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	} else {
-		end = start.AddDate(0, 1, 0) // Default to 1 month range
+		end = start.AddDate(0, 0, 1) // Default to 1 day range
 	}
 
 	timeRange := domain.TimeRange{
