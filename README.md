@@ -67,8 +67,13 @@ go tool cover -html=coverage.out
    ```
 
 2. Start the server:
+
    ```bash
    go run cmd/api/main.go
+   ```
+
+   ```bash
+   go run cmd/api/main.go -api_port=:8081
    ```
 
 ## Using the CLI Client

@@ -1,11 +1,10 @@
 package rest
 
 import (
-	"encoding/json"
 	"net/http"
 	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 
 	"astralis/internal/core/domain"
 	"astralis/internal/core/ports"
@@ -21,15 +20,15 @@ func NewHandler(service ports.EventService) *Handler {
 	}
 }
 
-func (h *Handler) RegisterRoutes(router *mux.Router) {
-	router.HandleFunc("/events", h.GetEvents).Methods(http.MethodGet)
-	router.HandleFunc("/events/{id}", h.GetEventByID).Methods(http.MethodGet)
-	router.HandleFunc("/events/type/{type}", h.GetEventsByType).Methods(http.MethodGet)
+func (h *Handler) RegisterRoutes(router *gin.Engine) {
+	router.GET("/events", h.GetEvents)
+	router.GET("/events/:id", h.GetEventByID)
+	router.GET("/events/type/:type", h.GetEventsByType)
 }
 
-func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
-	startStr := r.URL.Query().Get("start")
-	endStr := r.URL.Query().Get("end")
+func (h *Handler) GetEvents(c *gin.Context) {
+	startStr := c.Query("start")
+	endStr := c.Query("end")
 
 	var start, end time.Time
 	var err error
@@ -37,7 +36,7 @@ func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
 	if startStr != "" {
 		start, err = time.Parse(time.RFC3339, startStr)
 		if err != nil {
-			http.Error(w, "Invalid start date format", http.StatusBadRequest)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start date format"})
 			return
 		}
 	} else {
@@ -47,7 +46,7 @@ func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
 	if endStr != "" {
 		end, err = time.Parse(time.RFC3339, endStr)
 		if err != nil {
-			http.Error(w, "Invalid end date format", http.StatusBadRequest)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end date format"})
 			return
 		}
 	} else {
@@ -59,41 +58,41 @@ func (h *Handler) GetEvents(w http.ResponseWriter, r *http.Request) {
 		End:   end,
 	}
 
-	events, err := h.service.GetUpcomingEvents(r.Context(), timeRange)
+	events, err := h.service.GetUpcomingEvents(c.Request.Context(), timeRange)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(events)
+	c.JSON(http.StatusOK, gin.H{
+		"events": events,
+	})
 }
 
-func (h *Handler) GetEventByID(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	id := vars["id"]
+func (h *Handler) GetEventByID(c *gin.Context) {
+	id := c.Param("id")
 
-	event, err := h.service.GetEventByID(r.Context(), id)
+	event, err := h.service.GetEventByID(c.Request.Context(), id)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	if event == nil {
-		http.Error(w, "Event not found", http.StatusNotFound)
+		c.JSON(http.StatusNotFound, gin.H{"error": "Object not found"})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(event)
+	c.JSON(http.StatusOK, gin.H{
+		"event": event,
+	})
 }
 
-func (h *Handler) GetEventsByType(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)
-	eventType := domain.EventType(vars["type"])
+func (h *Handler) GetEventsByType(c *gin.Context) {
+	eventType := domain.EventType(c.Param("type"))
 
-	startStr := r.URL.Query().Get("start")
-	endStr := r.URL.Query().Get("end")
+	startStr := c.Query("start")
+	endStr := c.Query("end")
 
 	var start, end time.Time
 	var err error
@@ -101,7 +100,7 @@ func (h *Handler) GetEventsByType(w http.ResponseWriter, r *http.Request) {
 	if startStr != "" {
 		start, err = time.Parse(time.RFC3339, startStr)
 		if err != nil {
-			http.Error(w, "Invalid start date format", http.StatusBadRequest)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid start date format"})
 			return
 		}
 	} else {
@@ -111,7 +110,7 @@ func (h *Handler) GetEventsByType(w http.ResponseWriter, r *http.Request) {
 	if endStr != "" {
 		end, err = time.Parse(time.RFC3339, endStr)
 		if err != nil {
-			http.Error(w, "Invalid end date format", http.StatusBadRequest)
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid end date format"})
 			return
 		}
 	} else {
@@ -123,12 +122,13 @@ func (h *Handler) GetEventsByType(w http.ResponseWriter, r *http.Request) {
 		End:   end,
 	}
 
-	events, err := h.service.GetEventsByType(r.Context(), eventType, timeRange)
+	events, err := h.service.GetEventsByType(c.Request.Context(), eventType, timeRange)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(events)
+	c.JSON(http.StatusOK, gin.H{
+		"events": events,
+	})
 } 

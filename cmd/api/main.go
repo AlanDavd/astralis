@@ -1,28 +1,40 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/gin-gonic/gin"
 
 	"astralis/internal/adapters/primary/rest"
 	"astralis/internal/adapters/secondary/astronomyapi"
 	"astralis/internal/adapters/secondary/nasaapi"
 	"astralis/internal/core/ports"
 	"astralis/internal/core/service"
+	"astralis/pkg/config"
 )
 
 func main() {
-	// Initialize repositories
-	nasaRepo := nasaapi.NewNASARepository(os.Getenv("NASA_API_KEY"))
+	l := log.New(os.Stdout, "[Astralis API] ", 3)
 
-	astronomyRepo := astronomyapi.NewAstronomyAPIRepository()
+	c := config.LoadConfig()
+	l.Printf("loading config...")
 
-	// Create a slice of repositories
 	var repositories []ports.EventRepository
-	repositories = append(repositories, nasaRepo, astronomyRepo)
+	astronomyRepo := astronomyapi.NewAstronomyAPIRepository()
+	repositories = append(repositories, astronomyRepo)
+	l.Printf("loading AstronomyAPI...")
+
+	if c.NasaAPIKey() != "" {
+		nasaRepo := nasaapi.NewNASARepository(c.NasaAPIKey())
+		repositories = append(repositories, nasaRepo)
+		l.Printf("loading NasaAPI...")
+	}
 
 	// Initialize service
 	eventService := service.NewEventService(repositories)
@@ -31,18 +43,41 @@ func main() {
 	handler := rest.NewHandler(eventService)
 
 	// Create router and register routes
-	router := mux.NewRouter()
+	router := gin.Default()
 	handler.RegisterRoutes(router)
 
-	// Start server
-	port := os.Getenv("PORT")
-	if port == "" {
-		port = "8080"
+	l.Printf("Server starting on port %s", c.APIPort())
+	srv := &http.Server{
+		Addr:    c.APIPort(),
+		Handler: router.Handler(),
 	}
 
-	log.Printf("Server starting on port %s", port)
-	log.Printf("Using repositories: NASA API, Visible Planets API")
-	if err := http.ListenAndServe(":"+port, router); err != nil {
-		log.Fatal(err)
+	go func() {
+		// service connections
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			l.Fatalf("server crashed: %s\n", err)
+		}
+	}()
+
+	// Wait for interrupt signal to gracefully shutdown the server with
+	// a timeout of 5 seconds.
+	quit := make(chan os.Signal, 1)
+	// kill (no param) default send syscall.SIGTERM
+	// kill -2 is syscall.SIGINT
+	// kill -9 is syscall. SIGKILL but can"t be catch, so don't need add it
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	l.Println("Shutdown Server ...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		l.Fatal("Server Shutdown:", err)
 	}
-} 
+	// catching ctx.Done(). timeout of 5 seconds.
+	select {
+	case <-ctx.Done():
+		l.Println("timeout of 5 seconds.")
+	}
+	l.Println("Server exiting")
+}
