@@ -107,4 +107,4 @@ func TestEvent_IsVisible(t *testing.T) {
 			}
 		})
 	}
-} 
+}

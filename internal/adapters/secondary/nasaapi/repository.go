@@ -139,4 +139,4 @@ func (r *nasaAPIRepository) GetEventsByType(ctx context.Context, eventType domai
 
 func (r *nasaAPIRepository) Name() string {
 	return "NASA API"
-} 
+}

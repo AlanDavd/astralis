@@ -171,4 +171,4 @@ func TestEventService_GetEventsByDate(t *testing.T) {
 			}
 		})
 	}
-} 
+}

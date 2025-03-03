@@ -131,4 +131,4 @@ func (h *Handler) GetEventsByType(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"events": events,
 	})
-} 
+}

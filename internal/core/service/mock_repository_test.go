@@ -66,4 +66,4 @@ func (r *mockRepository) GetEventsByType(_ context.Context, eventType domain.Eve
 
 func (r *mockRepository) Name() string {
 	return "Mock Repository"
-} 
+}

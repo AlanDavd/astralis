@@ -129,4 +129,4 @@ func (r *astronomyAPIRepository) GetEventsByType(ctx context.Context, eventType 
 
 func (r *astronomyAPIRepository) Name() string {
 	return "Visible Planets API"
-} 
+}

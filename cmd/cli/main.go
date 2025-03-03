@@ -51,10 +51,14 @@ func main() {
 	}
 
 	var events []domain.Event
-	if err := json.NewDecoder(resp.Body).Decode(&events); err != nil {
+	var response struct {
+		Events []domain.Event `json:"events"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&response); err != nil {
 		fmt.Printf("Error decoding response: %v\n", err)
 		os.Exit(1)
 	}
+	events = response.Events
 
 	// Display events with ASCII art
 	for _, event := range events {
